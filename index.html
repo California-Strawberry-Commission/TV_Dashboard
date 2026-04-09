@@ -62,9 +62,40 @@
     justify-content: center;
     padding: 0 40px;
     background: linear-gradient(180deg, rgba(240,168,86,0.03) 0%, transparent 60%);
-    border-bottom: 1px solid var(--border-subtle);
+    border-bottom: none;
     pointer-events: none;
     user-select: none;
+  }
+
+  .drag-divider {
+    height: 6px;
+    flex-shrink: 0;
+    background: var(--border-subtle);
+    cursor: row-resize;
+    position: relative;
+    z-index: 10;
+    touch-action: none;
+    user-select: none;
+  }
+  .drag-divider:hover, .drag-divider.active {
+    background: var(--accent);
+  }
+  .drag-divider::after {
+    content: '';
+    position: absolute;
+    left: 50%;
+    top: 50%;
+    transform: translate(-50%, -50%);
+    width: 40px;
+    height: 3px;
+    border-radius: 2px;
+    background: var(--text-muted);
+    opacity: 0;
+    transition: opacity 0.2s;
+  }
+  .drag-divider:hover::after, .drag-divider.active::after {
+    opacity: 1;
+    background: var(--bg);
   }
 
   .display-top {
@@ -426,9 +457,10 @@
     position: relative;
     overflow: hidden;
     cursor: crosshair;
+    touch-action: none;
   }
 
-  .whiteboard-container canvas { display: block; width: 100%; height: 100%; }
+  .whiteboard-container canvas { display: block; width: 100%; height: 100%; touch-action: none; }
 
   .wb-tools {
     position: absolute;
@@ -679,6 +711,9 @@
     </div>
   </div>
 </div>
+
+<!-- DRAGGABLE DIVIDER -->
+<div class="drag-divider" id="drag-divider"></div>
 
 <!-- BOTTOM 60% — ALL INTERACTIVE -->
 <div class="interactive-zone">
@@ -1014,9 +1049,9 @@ function resizeCanvas() {
   wbCtx.scale(devicePixelRatio, devicePixelRatio);
   if (data) wbCtx.putImageData(data, 0, 0);
 }
-function wbStart(e) { wbDrawing=true; wbCtx.beginPath(); const r=wbCanvas.getBoundingClientRect(); wbCtx.moveTo(e.clientX-r.left, e.clientY-r.top); }
+function wbStart(e) { wbDrawing=true; wbCanvas.setPointerCapture(e.pointerId); wbCtx.beginPath(); const r=wbCanvas.getBoundingClientRect(); wbCtx.moveTo(e.clientX-r.left, e.clientY-r.top); }
 function wbMove(e) { if(!wbDrawing) return; const r=wbCanvas.getBoundingClientRect(); wbCtx.lineWidth=wbTool==='eraser'?30:3; wbCtx.lineCap='round'; wbCtx.lineJoin='round'; wbCtx.strokeStyle=wbTool==='eraser'?'#0c0f13':wbColor; wbCtx.lineTo(e.clientX-r.left,e.clientY-r.top); wbCtx.stroke(); }
-function wbEnd() { wbDrawing=false; }
+function wbEnd(e) { wbDrawing=false; if(e && e.pointerId != null) wbCanvas.releasePointerCapture(e.pointerId); }
 function setWbTool(t,btn) { wbTool=t; document.querySelectorAll('.wb-tool-btn[data-tool]').forEach(b=>b.classList.remove('active')); btn.classList.add('active'); }
 function setWbColor(c,dot) { wbColor=c; document.querySelectorAll('.color-dot').forEach(d=>d.classList.remove('active')); dot.classList.add('active'); }
 function clearWhiteboard() { if(wbCtx) wbCtx.clearRect(0,0,wbCanvas.width,wbCanvas.height); }
@@ -1049,6 +1084,46 @@ function deleteNote(i){notes.splice(i,1);saveNotes();renderNotes();}
 function updateNote(i,v){notes[i]=v;saveNotes();}
 function saveNotes(){localStorage.setItem('dashboard-notes',JSON.stringify(notes));}
 renderNotes();
+
+// DRAGGABLE DIVIDER
+(function() {
+  const divider = document.getElementById('drag-divider');
+  const display = document.querySelector('.display-zone');
+  const interactive = document.querySelector('.interactive-zone');
+  let dragging = false;
+
+  const saved = localStorage.getItem('dashboard-split');
+  if (saved) {
+    const pct = parseFloat(saved);
+    display.style.height = pct + 'vh';
+    interactive.style.height = (100 - pct) + 'vh';
+  }
+
+  divider.addEventListener('pointerdown', e => {
+    dragging = true;
+    divider.setPointerCapture(e.pointerId);
+    divider.classList.add('active');
+    document.body.style.cursor = 'row-resize';
+  });
+
+  window.addEventListener('pointermove', e => {
+    if (!dragging) return;
+    const vh = (e.clientY / window.innerHeight) * 100;
+    const clamped = Math.min(Math.max(vh, 15), 70);
+    display.style.height = clamped + 'vh';
+    interactive.style.height = (100 - clamped) + 'vh';
+  });
+
+  window.addEventListener('pointerup', () => {
+    if (!dragging) return;
+    dragging = false;
+    divider.classList.remove('active');
+    document.body.style.cursor = '';
+    const pct = (parseFloat(display.style.height) || 40);
+    localStorage.setItem('dashboard-split', pct);
+    if (currentView === 'whiteboard') requestAnimationFrame(resizeCanvas);
+  });
+})();
 </script>
 </body>
 </html>
