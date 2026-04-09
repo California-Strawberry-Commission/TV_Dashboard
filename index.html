@@ -1,0 +1,1054 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>Operator Aid — Office Dashboard</title>
+<link href="https://fonts.googleapis.com/css2?family=DM+Sans:ital,opsz,wght@0,9..40,300;0,9..40,400;0,9..40,500;0,9..40,600;0,9..40,700;1,9..40,400&family=JetBrains+Mono:wght@400;500;600&family=Fraunces:ital,opsz,wght@0,9..144,400;0,9..144,700;1,9..144,400&display=swap" rel="stylesheet">
+<style>
+  :root {
+    --bg: #0c0f13;
+    --surface: #151921;
+    --surface-2: #1c2230;
+    --surface-3: #232a38;
+    --border: #2a3244;
+    --border-subtle: #1e2636;
+    --text: #e8ecf2;
+    --text-dim: #8492a6;
+    --text-muted: #5a6a82;
+    --accent: #f0a856;
+    --accent-glow: rgba(240, 168, 86, 0.15);
+    --green: #5cc9a7;
+    --green-bg: rgba(92, 201, 167, 0.1);
+    --blue: #5b9cf6;
+    --blue-bg: rgba(91, 156, 246, 0.1);
+    --yellow: #f0c75e;
+    --yellow-bg: rgba(240, 199, 94, 0.1);
+    --red: #f07070;
+    --red-bg: rgba(240, 112, 112, 0.08);
+    --purple: #a78bfa;
+    --purple-bg: rgba(167, 139, 250, 0.1);
+    --radius: 12px;
+    --radius-sm: 8px;
+    --radius-lg: 16px;
+    --shadow: 0 2px 12px rgba(0,0,0,0.3);
+    --shadow-lg: 0 8px 32px rgba(0,0,0,0.4);
+  }
+
+  * { margin: 0; padding: 0; box-sizing: border-box; }
+
+  html, body {
+    height: 100%;
+    overflow: hidden;
+    background: var(--bg);
+    color: var(--text);
+    font-family: 'DM Sans', sans-serif;
+    -webkit-font-smoothing: antialiased;
+  }
+
+  body {
+    display: flex;
+    flex-direction: column;
+  }
+
+  /* ==========================================================
+     TOP ZONE — 40vh, READ-ONLY, ZERO INTERACTIVE ELEMENTS
+     ========================================================== */
+  .display-zone {
+    height: 40vh;
+    flex-shrink: 0;
+    display: flex;
+    flex-direction: column;
+    justify-content: center;
+    padding: 0 40px;
+    background: linear-gradient(180deg, rgba(240,168,86,0.03) 0%, transparent 60%);
+    border-bottom: 1px solid var(--border-subtle);
+    pointer-events: none;
+    user-select: none;
+  }
+
+  .display-top {
+    display: flex;
+    justify-content: space-between;
+    align-items: flex-end;
+    margin-bottom: 28px;
+  }
+
+  .clock-time {
+    font-family: 'Fraunces', serif;
+    font-size: 72px;
+    font-weight: 700;
+    letter-spacing: -3px;
+    line-height: 1;
+  }
+
+  .clock-date {
+    font-size: 16px;
+    color: var(--text-dim);
+    margin-top: 6px;
+    letter-spacing: 0.8px;
+    text-transform: uppercase;
+  }
+
+  .weather-block {
+    display: flex;
+    align-items: center;
+    gap: 14px;
+    text-align: right;
+  }
+
+  .weather-icon { font-size: 42px; }
+  .weather-temp {
+    font-family: 'JetBrains Mono', monospace;
+    font-size: 32px;
+    font-weight: 600;
+  }
+  .weather-desc { font-size: 14px; color: var(--text-dim); }
+  .weather-loc { font-size: 12px; color: var(--text-muted); }
+
+  .stats-row {
+    display: flex;
+    gap: 12px;
+    flex-wrap: wrap;
+  }
+
+  .stat-chip {
+    display: flex;
+    align-items: center;
+    gap: 8px;
+    background: var(--surface);
+    border: 1px solid var(--border-subtle);
+    border-radius: var(--radius);
+    padding: 10px 16px;
+    font-size: 14px;
+    color: var(--text-dim);
+  }
+
+  .stat-chip .dot {
+    width: 9px; height: 9px;
+    border-radius: 50%;
+    flex-shrink: 0;
+  }
+
+  .stat-chip .val {
+    font-family: 'JetBrains Mono', monospace;
+    font-weight: 600;
+    color: var(--text);
+    font-size: 15px;
+  }
+
+  .stat-chip.countdown {
+    background: var(--accent-glow);
+    border-color: rgba(240, 168, 86, 0.2);
+    color: var(--accent);
+  }
+  .stat-chip.countdown .val { color: var(--accent); }
+
+  /* ==========================================================
+     BOTTOM ZONE — 60vh, ALL INTERACTIVE CONTENT
+     ========================================================== */
+  .interactive-zone {
+    height: 60vh;
+    flex-shrink: 0;
+    display: flex;
+    flex-direction: column;
+    overflow: hidden;
+  }
+
+  .content-area {
+    flex: 1;
+    overflow: hidden;
+    position: relative;
+    min-height: 0;
+  }
+
+  .view {
+    position: absolute;
+    inset: 0;
+    display: none;
+    flex-direction: column;
+    overflow: hidden;
+  }
+  .view.active { display: flex; }
+
+  /* Persistent Bottom Toolbar */
+  .toolbar {
+    flex-shrink: 0;
+    display: flex;
+    gap: 6px;
+    padding: 10px 16px 14px;
+    border-top: 1px solid var(--border-subtle);
+    background: var(--surface);
+    overflow-x: auto;
+  }
+
+  .tool-btn {
+    flex: 1;
+    display: flex;
+    flex-direction: column;
+    align-items: center;
+    justify-content: center;
+    gap: 4px;
+    background: var(--surface-2);
+    border: 1px solid var(--border-subtle);
+    border-radius: var(--radius);
+    padding: 10px 8px;
+    cursor: pointer;
+    transition: all 0.2s;
+    color: var(--text-dim);
+    font-family: 'DM Sans', sans-serif;
+    min-width: 0;
+    -webkit-tap-highlight-color: transparent;
+  }
+
+  .tool-btn:hover, .tool-btn:active {
+    background: var(--surface-3);
+    border-color: var(--border);
+    color: var(--text);
+  }
+
+  .tool-btn.active {
+    background: var(--accent-glow);
+    border-color: rgba(240, 168, 86, 0.3);
+    color: var(--accent);
+  }
+
+  .tool-btn svg { width: 20px; height: 20px; flex-shrink: 0; }
+  .tool-btn span { font-size: 10px; font-weight: 500; letter-spacing: 0.3px; white-space: nowrap; }
+
+  .toolbar-divider {
+    width: 1px;
+    background: var(--border);
+    margin: 4px 2px;
+    flex-shrink: 0;
+  }
+
+  /* ==========================================================
+     KANBAN
+     ========================================================== */
+  .kanban-header {
+    display: flex;
+    justify-content: space-between;
+    align-items: center;
+    padding: 10px 16px;
+    flex-shrink: 0;
+    border-bottom: 1px solid var(--border-subtle);
+  }
+
+  .kanban-title {
+    font-family: 'Fraunces', serif;
+    font-size: 17px;
+    font-weight: 700;
+  }
+  .kanban-subtitle {
+    font-size: 11px;
+    color: var(--text-muted);
+    margin-top: 1px;
+  }
+
+  .refresh-btn {
+    background: var(--surface);
+    border: 1px solid var(--border);
+    border-radius: var(--radius-sm);
+    color: var(--text-dim);
+    padding: 7px 12px;
+    font-size: 11px;
+    cursor: pointer;
+    display: flex;
+    align-items: center;
+    gap: 5px;
+    transition: all 0.2s;
+    font-family: 'DM Sans', sans-serif;
+    -webkit-tap-highlight-color: transparent;
+  }
+  .refresh-btn:hover { background: var(--surface-2); color: var(--text); }
+  .refresh-btn.loading svg { animation: spin 0.8s linear infinite; }
+  @keyframes spin { to { transform: rotate(360deg); } }
+
+  .kanban-columns {
+    flex: 1;
+    display: flex;
+    gap: 8px;
+    padding: 8px 10px;
+    min-height: 0;
+    overflow: hidden;
+  }
+
+  .kanban-col {
+    flex: 1;
+    display: flex;
+    flex-direction: column;
+    min-height: 0;
+    background: var(--surface);
+    border-radius: var(--radius);
+    border: 1px solid var(--border-subtle);
+    overflow: hidden;
+  }
+
+  .col-header {
+    flex-shrink: 0;
+    display: flex;
+    align-items: center;
+    justify-content: space-between;
+    padding: 8px 12px;
+    border-bottom: 1px solid var(--border-subtle);
+  }
+
+  .col-header-left {
+    display: flex;
+    align-items: center;
+    gap: 6px;
+  }
+
+  .col-dot { width: 8px; height: 8px; border-radius: 50%; }
+
+  .col-name {
+    font-size: 11px;
+    font-weight: 600;
+    text-transform: uppercase;
+    letter-spacing: 0.8px;
+  }
+
+  .col-count {
+    font-family: 'JetBrains Mono', monospace;
+    font-size: 10px;
+    background: var(--surface-3);
+    padding: 2px 7px;
+    border-radius: 10px;
+    color: var(--text-dim);
+  }
+
+  .col-cards {
+    flex: 1;
+    overflow-y: auto;
+    padding: 6px;
+    display: flex;
+    flex-direction: column;
+    gap: 5px;
+    -webkit-overflow-scrolling: touch;
+  }
+
+  .col-cards::-webkit-scrollbar { width: 3px; }
+  .col-cards::-webkit-scrollbar-track { background: transparent; }
+  .col-cards::-webkit-scrollbar-thumb { background: var(--border); border-radius: 3px; }
+
+  .task-card {
+    background: var(--surface-2);
+    border: 1px solid var(--border-subtle);
+    border-radius: var(--radius-sm);
+    padding: 9px 10px 9px 13px;
+    cursor: grab;
+    transition: all 0.15s ease;
+    touch-action: pan-y;
+    position: relative;
+    -webkit-tap-highlight-color: transparent;
+  }
+  .task-card:active { cursor: grabbing; }
+  .task-card:hover { border-color: var(--border); background: var(--surface-3); }
+  .task-card.dragging { opacity: 0.4; transform: scale(0.96); }
+
+  .task-card .task-key {
+    font-family: 'JetBrains Mono', monospace;
+    font-size: 10px;
+    color: var(--text-muted);
+    margin-bottom: 2px;
+  }
+
+  .task-card .task-summary {
+    font-size: 12px;
+    font-weight: 500;
+    line-height: 1.35;
+    color: var(--text);
+    margin-bottom: 5px;
+  }
+
+  .task-card .task-meta {
+    display: flex;
+    align-items: center;
+    justify-content: space-between;
+  }
+
+  .task-card .task-type {
+    font-size: 9px;
+    text-transform: uppercase;
+    letter-spacing: 0.5px;
+    color: var(--text-muted);
+    background: var(--surface);
+    padding: 1px 6px;
+    border-radius: 5px;
+  }
+
+  .task-card .task-assignee {
+    font-size: 10px;
+    color: var(--text-dim);
+    display: flex;
+    align-items: center;
+    gap: 4px;
+  }
+
+  .assignee-dot {
+    width: 16px; height: 16px;
+    border-radius: 50%;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    font-size: 8px;
+    font-weight: 700;
+    color: var(--bg);
+    flex-shrink: 0;
+  }
+
+  .task-card .priority-bar {
+    position: absolute;
+    left: 0; top: 10px; bottom: 10px;
+    width: 3px;
+    border-radius: 0 3px 3px 0;
+  }
+
+  .kanban-col.drag-over .col-cards { background: rgba(240, 168, 86, 0.03); }
+  .kanban-col.drag-over { border-color: rgba(240, 168, 86, 0.3); }
+
+  .empty-state {
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    height: 50px;
+    color: var(--text-muted);
+    font-size: 11px;
+    font-style: italic;
+  }
+
+  /* ==========================================================
+     WHITEBOARD
+     ========================================================== */
+  .whiteboard-container {
+    flex: 1;
+    position: relative;
+    overflow: hidden;
+    cursor: crosshair;
+  }
+
+  .whiteboard-container canvas { display: block; width: 100%; height: 100%; }
+
+  .wb-tools {
+    position: absolute;
+    bottom: 12px;
+    left: 50%;
+    transform: translateX(-50%);
+    display: flex;
+    gap: 5px;
+    background: var(--surface);
+    border: 1px solid var(--border);
+    border-radius: var(--radius-lg);
+    padding: 6px 10px;
+    box-shadow: var(--shadow-lg);
+  }
+
+  .wb-tool-btn {
+    width: 36px; height: 36px;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    border-radius: var(--radius-sm);
+    border: none;
+    background: transparent;
+    color: var(--text-dim);
+    cursor: pointer;
+    transition: all 0.15s;
+    font-size: 16px;
+    -webkit-tap-highlight-color: transparent;
+  }
+  .wb-tool-btn:hover { background: var(--surface-2); color: var(--text); }
+  .wb-tool-btn.active { background: var(--accent-glow); color: var(--accent); }
+
+  .color-dot {
+    width: 20px; height: 20px;
+    border-radius: 50%;
+    border: 2px solid transparent;
+    cursor: pointer;
+    transition: border-color 0.15s;
+    -webkit-tap-highlight-color: transparent;
+  }
+  .color-dot.active { border-color: var(--text); }
+
+  /* ==========================================================
+     TIMER
+     ========================================================== */
+  .timer-view-inner {
+    flex: 1;
+    display: flex;
+    flex-direction: column;
+    align-items: center;
+    justify-content: center;
+    gap: 20px;
+  }
+
+  .timer-value {
+    font-family: 'JetBrains Mono', monospace;
+    font-size: 88px;
+    font-weight: 600;
+    letter-spacing: -3px;
+    line-height: 1;
+  }
+
+  .timer-label-text {
+    font-size: 15px;
+    color: var(--text-dim);
+    text-transform: uppercase;
+    letter-spacing: 2px;
+  }
+
+  .timer-controls { display: flex; gap: 10px; }
+
+  .timer-btn {
+    background: var(--surface);
+    border: 1px solid var(--border);
+    border-radius: var(--radius);
+    color: var(--text);
+    padding: 12px 28px;
+    font-size: 15px;
+    font-weight: 600;
+    cursor: pointer;
+    font-family: 'DM Sans', sans-serif;
+    transition: all 0.2s;
+    -webkit-tap-highlight-color: transparent;
+  }
+  .timer-btn:hover { background: var(--surface-2); }
+  .timer-btn.primary { background: var(--accent); border-color: var(--accent); color: var(--bg); }
+  .timer-btn.primary:hover { filter: brightness(1.1); }
+
+  .timer-presets { display: flex; gap: 6px; flex-wrap: wrap; justify-content: center; }
+
+  .preset-btn {
+    background: var(--surface-2);
+    border: 1px solid var(--border-subtle);
+    border-radius: var(--radius-sm);
+    color: var(--text-dim);
+    padding: 7px 14px;
+    font-size: 12px;
+    cursor: pointer;
+    font-family: 'DM Sans', sans-serif;
+    transition: all 0.2s;
+    -webkit-tap-highlight-color: transparent;
+  }
+  .preset-btn:hover { background: var(--surface-3); color: var(--text); }
+
+  /* ==========================================================
+     NOTES
+     ========================================================== */
+  .notes-view-inner {
+    flex: 1;
+    padding: 10px 12px;
+    display: grid;
+    grid-template-columns: repeat(auto-fill, minmax(200px, 1fr));
+    gap: 8px;
+    overflow-y: auto;
+    align-content: start;
+    -webkit-overflow-scrolling: touch;
+  }
+
+  .sticky-note {
+    border-radius: var(--radius);
+    padding: 12px;
+    min-height: 90px;
+    position: relative;
+  }
+
+  .sticky-note textarea {
+    width: 100%; height: 100%; min-height: 60px;
+    background: transparent;
+    border: none;
+    color: var(--text);
+    font-family: 'DM Sans', sans-serif;
+    font-size: 13px;
+    resize: none;
+    outline: none;
+  }
+
+  .sticky-note .delete-note {
+    position: absolute;
+    top: 6px; right: 6px;
+    width: 24px; height: 24px;
+    background: rgba(0,0,0,0.3);
+    border: none;
+    border-radius: 50%;
+    color: var(--text-dim);
+    cursor: pointer;
+    font-size: 12px;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    opacity: 0;
+    transition: opacity 0.15s;
+  }
+  .sticky-note:hover .delete-note,
+  .sticky-note:focus-within .delete-note { opacity: 1; }
+
+  .add-note-btn {
+    border: 2px dashed var(--border);
+    border-radius: var(--radius);
+    min-height: 90px;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    color: var(--text-muted);
+    font-size: 28px;
+    cursor: pointer;
+    transition: all 0.2s;
+    background: transparent;
+    font-family: 'DM Sans', sans-serif;
+  }
+  .add-note-btn:hover { border-color: var(--accent); color: var(--accent); }
+
+  /* ==========================================================
+     LINKS
+     ========================================================== */
+  .links-view-inner {
+    flex: 1;
+    padding: 12px;
+    display: grid;
+    grid-template-columns: repeat(auto-fill, minmax(220px, 1fr));
+    gap: 10px;
+    overflow-y: auto;
+    align-content: start;
+    -webkit-overflow-scrolling: touch;
+  }
+
+  .link-card {
+    background: var(--surface);
+    border: 1px solid var(--border-subtle);
+    border-radius: var(--radius);
+    padding: 14px;
+    cursor: pointer;
+    transition: all 0.2s;
+    text-decoration: none;
+    color: var(--text);
+  }
+  .link-card:hover { border-color: var(--border); background: var(--surface-2); }
+  .link-card .link-icon { font-size: 22px; margin-bottom: 6px; }
+  .link-card .link-name { font-weight: 600; font-size: 13px; margin-bottom: 3px; }
+  .link-card .link-url { font-size: 11px; color: var(--text-muted); }
+
+  @keyframes fadeIn { from { opacity: 0; transform: translateY(4px); } to { opacity: 1; transform: none; } }
+  .fade-in { animation: fadeIn 0.25s ease forwards; }
+</style>
+</head>
+<body>
+
+<!-- TOP 40% — DISPLAY ONLY — nothing clickable -->
+<div class="display-zone">
+  <div class="display-top">
+    <div>
+      <div class="clock-time" id="clock">--:--</div>
+      <div class="clock-date" id="date">Loading...</div>
+    </div>
+    <div class="weather-block">
+      <div style="text-align:right">
+        <div class="weather-temp" id="weather-temp">--°</div>
+        <div class="weather-desc" id="weather-desc">Loading...</div>
+        <div class="weather-loc">San Luis Obispo, CA</div>
+      </div>
+      <span class="weather-icon" id="weather-icon">☀️</span>
+    </div>
+  </div>
+  <div class="stats-row">
+    <div class="stat-chip">
+      <span class="dot" style="background:var(--blue)"></span>
+      <span>In Progress</span>
+      <span class="val" id="stat-progress">-</span>
+    </div>
+    <div class="stat-chip">
+      <span class="dot" style="background:var(--green)"></span>
+      <span>Done</span>
+      <span class="val" id="stat-done">-</span>
+    </div>
+    <div class="stat-chip">
+      <span class="dot" style="background:var(--text-muted)"></span>
+      <span>To Do</span>
+      <span class="val" id="stat-todo">-</span>
+    </div>
+    <div class="stat-chip countdown" id="countdown-chip" style="display:none">
+      <span>⏱</span>
+      <span id="countdown-label">Graduation</span>
+      <span class="val" id="countdown-val">--</span>
+    </div>
+    <div class="stat-chip">
+      <span class="dot" style="background:var(--purple)"></span>
+      <span>Team</span>
+      <span class="val" id="stat-team">-</span>
+    </div>
+  </div>
+</div>
+
+<!-- BOTTOM 60% — ALL INTERACTIVE -->
+<div class="interactive-zone">
+  <div class="content-area">
+
+    <!-- KANBAN (home) -->
+    <div class="view active" id="view-kanban">
+      <div class="kanban-header">
+        <div>
+          <div class="kanban-title">Operator Aid</div>
+          <div class="kanban-subtitle">Current Sprint · SCRUM Board</div>
+        </div>
+        <button class="refresh-btn" id="refresh-btn" onclick="loadJiraData()">
+          <svg width="13" height="13" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5" stroke-linecap="round" stroke-linejoin="round"><path d="M21 12a9 9 0 11-6.2-8.6"/><polyline points="21 3 21 9 15 9"/></svg>
+          Refresh
+        </button>
+      </div>
+      <div class="kanban-columns" id="kanban">
+        <div class="kanban-col" data-status="To Do" id="col-todo">
+          <div class="col-header">
+            <div class="col-header-left">
+              <div class="col-dot" style="background:var(--text-muted)"></div>
+              <span class="col-name">To Do</span>
+            </div>
+            <span class="col-count" id="count-todo">0</span>
+          </div>
+          <div class="col-cards" id="cards-todo"></div>
+        </div>
+        <div class="kanban-col" data-status="In Progress" id="col-progress">
+          <div class="col-header">
+            <div class="col-header-left">
+              <div class="col-dot" style="background:var(--blue)"></div>
+              <span class="col-name">In Progress</span>
+            </div>
+            <span class="col-count" id="count-progress">0</span>
+          </div>
+          <div class="col-cards" id="cards-progress"></div>
+        </div>
+        <div class="kanban-col" data-status="Done" id="col-done">
+          <div class="col-header">
+            <div class="col-header-left">
+              <div class="col-dot" style="background:var(--green)"></div>
+              <span class="col-name">Done</span>
+            </div>
+            <span class="col-count" id="count-done">0</span>
+          </div>
+          <div class="col-cards" id="cards-done"></div>
+        </div>
+      </div>
+    </div>
+
+    <!-- WHITEBOARD -->
+    <div class="view" id="view-whiteboard">
+      <div class="whiteboard-container">
+        <canvas id="wb-canvas"></canvas>
+        <div class="wb-tools">
+          <button class="wb-tool-btn active" data-tool="pen" onclick="setWbTool('pen',this)">✏️</button>
+          <button class="wb-tool-btn" data-tool="eraser" onclick="setWbTool('eraser',this)">🧹</button>
+          <div style="width:1px;background:var(--border);margin:2px 4px"></div>
+          <div class="color-dot active" style="background:var(--text)" onclick="setWbColor('#e8ecf2',this)"></div>
+          <div class="color-dot" style="background:var(--accent)" onclick="setWbColor('#f0a856',this)"></div>
+          <div class="color-dot" style="background:var(--blue)" onclick="setWbColor('#5b9cf6',this)"></div>
+          <div class="color-dot" style="background:var(--green)" onclick="setWbColor('#5cc9a7',this)"></div>
+          <div class="color-dot" style="background:var(--red)" onclick="setWbColor('#f07070',this)"></div>
+          <div style="width:1px;background:var(--border);margin:2px 4px"></div>
+          <button class="wb-tool-btn" onclick="clearWhiteboard()">🗑️</button>
+        </div>
+      </div>
+    </div>
+
+    <!-- TIMER -->
+    <div class="view" id="view-timer">
+      <div class="timer-view-inner">
+        <div class="timer-label-text" id="timer-label">Focus Time</div>
+        <div class="timer-value" id="timer-value">25:00</div>
+        <div class="timer-controls">
+          <button class="timer-btn primary" id="timer-start" onclick="toggleTimer()">Start</button>
+          <button class="timer-btn" onclick="resetTimer()">Reset</button>
+        </div>
+        <div class="timer-presets">
+          <button class="preset-btn" onclick="setTimerPreset(5,'Quick Break')">5 min</button>
+          <button class="preset-btn" onclick="setTimerPreset(15,'Standup')">15 min</button>
+          <button class="preset-btn" onclick="setTimerPreset(25,'Focus')">25 min</button>
+          <button class="preset-btn" onclick="setTimerPreset(45,'Deep Work')">45 min</button>
+          <button class="preset-btn" onclick="setTimerPreset(60,'Sprint')">60 min</button>
+        </div>
+      </div>
+    </div>
+
+    <!-- NOTES -->
+    <div class="view" id="view-notes">
+      <div class="notes-view-inner" id="notes-grid"></div>
+    </div>
+
+    <!-- LINKS -->
+    <div class="view" id="view-links">
+      <div class="links-view-inner">
+        <a class="link-card" href="https://operatoraid.atlassian.net" target="_blank">
+          <div class="link-icon">📋</div>
+          <div class="link-name">Jira Board</div>
+          <div class="link-url">operatoraid.atlassian.net</div>
+        </a>
+        <a class="link-card" href="https://operatoraid.atlassian.net/wiki" target="_blank">
+          <div class="link-icon">📖</div>
+          <div class="link-name">Confluence Wiki</div>
+          <div class="link-url">operatoraid.atlassian.net/wiki</div>
+        </a>
+        <a class="link-card" href="https://github.com" target="_blank">
+          <div class="link-icon">🐙</div>
+          <div class="link-name">GitHub</div>
+          <div class="link-url">github.com</div>
+        </a>
+        <a class="link-card" href="https://calpoly.instructure.com" target="_blank">
+          <div class="link-icon">🎓</div>
+          <div class="link-name">Canvas LMS</div>
+          <div class="link-url">calpoly.instructure.com</div>
+        </a>
+      </div>
+    </div>
+
+  </div>
+
+  <!-- PERSISTENT TOOLBAR — always at the very bottom -->
+  <div class="toolbar">
+    <button class="tool-btn active" data-view="kanban" onclick="switchView('kanban')">
+      <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><rect x="3" y="3" width="7" height="7"/><rect x="14" y="3" width="7" height="7"/><rect x="14" y="14" width="7" height="7"/><rect x="3" y="14" width="7" height="7"/></svg>
+      <span>Board</span>
+    </button>
+    <div class="toolbar-divider"></div>
+    <button class="tool-btn" data-view="whiteboard" onclick="switchView('whiteboard')">
+      <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M12 19l7-7 3 3-7 7-3-3z"/><path d="M18 13l-1.5-7.5L2 2l3.5 14.5L13 18l5-5z"/><path d="M2 2l7.586 7.586"/><circle cx="11" cy="11" r="2"/></svg>
+      <span>Whiteboard</span>
+    </button>
+    <button class="tool-btn" data-view="timer" onclick="switchView('timer')">
+      <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><circle cx="12" cy="12" r="10"/><polyline points="12 6 12 12 16 14"/></svg>
+      <span>Timer</span>
+    </button>
+    <button class="tool-btn" data-view="notes" onclick="switchView('notes')">
+      <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M14 2H6a2 2 0 0 0-2 2v16a2 2 0 0 0 2 2h12a2 2 0 0 0 2-2V8z"/><polyline points="14 2 14 8 20 8"/><line x1="16" y1="13" x2="8" y2="13"/><line x1="16" y1="17" x2="8" y2="17"/></svg>
+      <span>Notes</span>
+    </button>
+    <button class="tool-btn" data-view="links" onclick="switchView('links')">
+      <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M10 13a5 5 0 0 0 7.54.54l3-3a5 5 0 0 0-7.07-7.07l-1.72 1.71"/><path d="M14 11a5 5 0 0 0-7.54-.54l-3 3a5 5 0 0 0 7.07 7.07l1.71-1.71"/></svg>
+      <span>Links</span>
+    </button>
+  </div>
+</div>
+
+<script>
+// VIEW SWITCHING
+let currentView = 'kanban';
+function switchView(name) {
+  currentView = name;
+  document.querySelectorAll('.view').forEach(v => v.classList.remove('active'));
+  document.getElementById(`view-${name}`).classList.add('active');
+  document.querySelectorAll('.tool-btn[data-view]').forEach(b => {
+    b.classList.toggle('active', b.dataset.view === name);
+  });
+  if (name === 'whiteboard') requestAnimationFrame(resizeCanvas);
+}
+
+// CLOCK
+function updateClock() {
+  const now = new Date();
+  const h = now.getHours(), m = now.getMinutes().toString().padStart(2,'0');
+  const ampm = h >= 12 ? 'PM' : 'AM';
+  document.getElementById('clock').textContent = `${h % 12 || 12}:${m} ${ampm}`;
+  const days = ['Sunday','Monday','Tuesday','Wednesday','Thursday','Friday','Saturday'];
+  const months = ['January','February','March','April','May','June','July','August','September','October','November','December'];
+  document.getElementById('date').textContent = `${days[now.getDay()]}, ${months[now.getMonth()]} ${now.getDate()}, ${now.getFullYear()}`;
+}
+updateClock(); setInterval(updateClock, 10000);
+
+// WEATHER
+async function loadWeather() {
+  try {
+    const r = await fetch('https://api.open-meteo.com/v1/forecast?latitude=35.28&longitude=-120.66&current=temperature_2m,weathercode&temperature_unit=fahrenheit&timezone=America/Los_Angeles');
+    const d = await r.json();
+    document.getElementById('weather-temp').textContent = Math.round(d.current.temperature_2m) + '°F';
+    const code = d.current.weathercode;
+    const icons = {0:'☀️',1:'🌤️',2:'⛅',3:'☁️',45:'🌫️',48:'🌫️',51:'🌦️',53:'🌦️',55:'🌧️',61:'🌧️',63:'🌧️',65:'🌧️',80:'🌦️',95:'⛈️'};
+    const descs = {0:'Clear sky',1:'Mostly clear',2:'Partly cloudy',3:'Overcast',45:'Foggy',48:'Fog',51:'Light drizzle',53:'Drizzle',55:'Heavy drizzle',61:'Light rain',63:'Rain',65:'Heavy rain',80:'Showers',95:'Thunderstorm'};
+    document.getElementById('weather-icon').textContent = icons[code] || '🌡️';
+    document.getElementById('weather-desc').textContent = descs[code] || 'Unknown';
+  } catch(e) { document.getElementById('weather-desc').textContent = 'Unavailable'; }
+}
+loadWeather(); setInterval(loadWeather, 600000);
+
+// COUNTDOWN
+function updateCountdown() {
+  const diff = new Date('2026-06-12T17:00:00') - new Date();
+  if (diff > 0) {
+    document.getElementById('countdown-chip').style.display = 'flex';
+    document.getElementById('countdown-val').textContent = Math.floor(diff / 86400000) + 'd';
+  }
+}
+updateCountdown(); setInterval(updateCountdown, 3600000);
+
+// JIRA
+const ASSIGNEE_COLORS = {};
+const COLOR_PALETTE = ['#f0a856','#5b9cf6','#5cc9a7','#a78bfa','#f07070','#f0c75e','#ff8fab','#64d2ff'];
+let colorIdx = 0;
+function getAssigneeColor(n) { if(!n) return '#5a6a82'; if(!ASSIGNEE_COLORS[n]){ASSIGNEE_COLORS[n]=COLOR_PALETTE[colorIdx++%COLOR_PALETTE.length];} return ASSIGNEE_COLORS[n]; }
+
+function createTaskCard(issue) {
+  const card = document.createElement('div');
+  card.className = 'task-card fade-in';
+  card.draggable = true;
+  card.dataset.key = issue.key;
+  const a = issue.fields.assignee?.displayName || null;
+  const ac = getAssigneeColor(a);
+  const pc = issue.fields.priority?.name === 'High' ? 'var(--red)' : issue.fields.priority?.name === 'Medium' ? 'var(--yellow)' : 'var(--text-muted)';
+  card.innerHTML = `
+    <div class="priority-bar" style="background:${pc}"></div>
+    <div class="task-key">${issue.key}</div>
+    <div class="task-summary">${issue.fields.summary}</div>
+    <div class="task-meta">
+      <span class="task-type">${issue.fields.issuetype.name}</span>
+      ${a ? `<span class="task-assignee"><span class="assignee-dot" style="background:${ac}">${a.charAt(0).toUpperCase()}</span>${a}</span>` : ''}
+    </div>`;
+  card.addEventListener('dragstart', e => { e.dataTransfer.setData('text/plain', issue.key); card.classList.add('dragging'); });
+  card.addEventListener('dragend', () => card.classList.remove('dragging'));
+  let tx;
+  card.addEventListener('touchstart', e => { tx = e.touches[0].clientX; }, { passive: true });
+  card.addEventListener('touchend', e => {
+    const dx = e.changedTouches[0].clientX - tx;
+    if (Math.abs(dx) > 80) {
+      const s = issue.fields.status.name;
+      const ns = dx > 0 ? (s==='To Do'?'In Progress':s==='In Progress'?'Done':null) : (s==='Done'?'In Progress':s==='In Progress'?'To Do':null);
+      if (ns) moveCard(issue.key, ns);
+    }
+  });
+  return card;
+}
+
+let allIssues = [];
+function renderBoard() {
+  const c = { todo: document.getElementById('cards-todo'), progress: document.getElementById('cards-progress'), done: document.getElementById('cards-done') };
+  Object.values(c).forEach(el => el.innerHTML = '');
+  let counts = { todo:0, progress:0, done:0 };
+  const team = new Set();
+  allIssues.forEach(issue => {
+    const s = issue.fields.status.name;
+    const card = createTaskCard(issue);
+    if (issue.fields.assignee) team.add(issue.fields.assignee.displayName);
+    if (s === 'Done') { c.done.appendChild(card); counts.done++; }
+    else if (s === 'In Progress') { c.progress.appendChild(card); counts.progress++; }
+    else { c.todo.appendChild(card); counts.todo++; }
+  });
+  Object.values(c).forEach(el => { if (!el.children.length) el.innerHTML = '<div class="empty-state">No tasks</div>'; });
+  document.getElementById('count-todo').textContent = counts.todo;
+  document.getElementById('count-progress').textContent = counts.progress;
+  document.getElementById('count-done').textContent = counts.done;
+  document.getElementById('stat-todo').textContent = counts.todo;
+  document.getElementById('stat-progress').textContent = counts.progress;
+  document.getElementById('stat-done').textContent = counts.done;
+  document.getElementById('stat-team').textContent = team.size;
+}
+
+async function loadJiraData() {
+  const btn = document.getElementById('refresh-btn');
+  btn.classList.add('loading');
+  try {
+    const r = await fetch('https://api.anthropic.com/v1/messages', {
+      method: 'POST', headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify({
+        model: 'claude-sonnet-4-20250514', max_tokens: 1000,
+        system: 'You are a data extraction assistant. When you receive Jira search results, extract them into a JSON array. Respond ONLY with valid JSON, no markdown, no backticks. The JSON should be an array of objects with: key, id, summary, status, issuetype, priority, assignee (displayName or null).',
+        messages: [{ role: 'user', content: 'Search Jira for issues in the SCRUM project that are in the current active sprint. Use JQL: project = SCRUM AND sprint in openSprints() ORDER BY status ASC, updated DESC. Return them as JSON.' }],
+        mcp_servers: [{ type: 'url', url: 'https://mcp.atlassian.com/v1/mcp', name: 'atlassian-rovo' }]
+      })
+    });
+    const data = await r.json();
+    let issues = [];
+    for (const block of data.content || []) {
+      if (block.type === 'text' && block.text) {
+        try { const p = JSON.parse(block.text.replace(/```json|```/g,'').trim()); if(Array.isArray(p)) issues = p.map(i=>({key:i.key,id:i.id,fields:{summary:i.summary,status:{name:i.status||'To Do'},issuetype:{name:i.issuetype||'Task'},priority:{name:i.priority||'Medium'},assignee:i.assignee?{displayName:i.assignee}:null}})); } catch(e){}
+      }
+      if (block.type === 'mcp_tool_result' && block.content) {
+        for (const sub of block.content) { if(sub.text){ try{ const p=JSON.parse(sub.text); if(p.issues) issues=p.issues.map(i=>({key:i.key,id:i.id,fields:{summary:i.fields?.summary||i.summary||'Untitled',status:{name:i.fields?.status?.name||i.status||'To Do'},issuetype:{name:i.fields?.issuetype?.name||i.issuetype||'Task'},priority:{name:i.fields?.priority?.name||i.priority||'Medium'},assignee:(i.fields?.assignee||i.assignee)?{displayName:i.fields?.assignee?.displayName||i.assignee?.displayName||i.assignee}:null}})); }catch(e){} }}
+      }
+    }
+    if (issues.length > 0) { allIssues = issues; renderBoard(); } else loadFallbackData();
+  } catch(e) { console.error(e); loadFallbackData(); }
+  btn.classList.remove('loading');
+}
+
+function loadFallbackData() {
+  allIssues = [
+    {key:'SCRUM-6',id:'10005',fields:{summary:'Schedule verification appointment with Alison after Defensive Driving courses completed',status:{name:'In Progress'},issuetype:{name:'Task'},priority:{name:'Medium'},assignee:null}},
+    {key:'SCRUM-5',id:'10004',fields:{summary:'Complete Powered Cart Safety Training',status:{name:'In Progress'},issuetype:{name:'Task'},priority:{name:'Medium'},assignee:null}},
+    {key:'SCRUM-4',id:'10003',fields:{summary:'Complete Defensive Driver Program Training',status:{name:'In Progress'},issuetype:{name:'Task'},priority:{name:'Medium'},assignee:null}},
+    {key:'SCRUM-7',id:'10006',fields:{summary:'Sign Photo Release forms',status:{name:'In Progress'},issuetype:{name:'Task'},priority:{name:'Medium'},assignee:null}},
+    {key:'SCRUM-3',id:'10002',fields:{summary:'Complete Learning Hub Trainings',status:{name:'In Progress'},issuetype:{name:'Task'},priority:{name:'Medium'},assignee:null}},
+    {key:'SCRUM-2',id:'10001',fields:{summary:'Schedule headshots with Colette',status:{name:'In Progress'},issuetype:{name:'Task'},priority:{name:'Medium'},assignee:null}},
+    {key:'SCRUM-1',id:'10000',fields:{summary:'Schedule welcome meeting with Dr. Holmes',status:{name:'In Progress'},issuetype:{name:'Task'},priority:{name:'Medium'},assignee:null}},
+    {key:'SCRUM-8',id:'10007',fields:{summary:'Create onboarding Documents for new teammates',status:{name:'Done'},issuetype:{name:'Task'},priority:{name:'Medium'},assignee:null}},
+  ];
+  renderBoard();
+}
+
+function moveCard(key, ns) { const i=allIssues.find(x=>x.key===key); if(i){i.fields.status.name=ns;renderBoard();} }
+
+document.querySelectorAll('.kanban-col').forEach(col => {
+  col.addEventListener('dragover', e => { e.preventDefault(); col.classList.add('drag-over'); });
+  col.addEventListener('dragleave', () => col.classList.remove('drag-over'));
+  col.addEventListener('drop', e => { e.preventDefault(); col.classList.remove('drag-over'); moveCard(e.dataTransfer.getData('text/plain'), col.dataset.status); });
+});
+
+loadFallbackData();
+setTimeout(loadJiraData, 2000);
+setInterval(loadJiraData, 300000);
+
+// WHITEBOARD
+let wbCanvas, wbCtx, wbDrawing = false, wbTool = 'pen', wbColor = '#e8ecf2';
+function initWhiteboard() {
+  wbCanvas = document.getElementById('wb-canvas');
+  wbCtx = wbCanvas.getContext('2d');
+  wbCanvas.addEventListener('pointerdown', wbStart);
+  wbCanvas.addEventListener('pointermove', wbMove);
+  wbCanvas.addEventListener('pointerup', wbEnd);
+  wbCanvas.addEventListener('pointerleave', wbEnd);
+  window.addEventListener('resize', () => { if (currentView === 'whiteboard') resizeCanvas(); });
+}
+function resizeCanvas() {
+  if (!wbCanvas) return;
+  const rect = wbCanvas.parentElement.getBoundingClientRect();
+  if (rect.width === 0 || rect.height === 0) return;
+  let data = null;
+  if (wbCanvas.width > 0 && wbCanvas.height > 0) { try { data = wbCtx.getImageData(0,0,wbCanvas.width,wbCanvas.height); } catch(e){} }
+  wbCanvas.width = rect.width * devicePixelRatio;
+  wbCanvas.height = rect.height * devicePixelRatio;
+  wbCtx.scale(devicePixelRatio, devicePixelRatio);
+  if (data) wbCtx.putImageData(data, 0, 0);
+}
+function wbStart(e) { wbDrawing=true; wbCtx.beginPath(); const r=wbCanvas.getBoundingClientRect(); wbCtx.moveTo(e.clientX-r.left, e.clientY-r.top); }
+function wbMove(e) { if(!wbDrawing) return; const r=wbCanvas.getBoundingClientRect(); wbCtx.lineWidth=wbTool==='eraser'?30:3; wbCtx.lineCap='round'; wbCtx.lineJoin='round'; wbCtx.strokeStyle=wbTool==='eraser'?'#0c0f13':wbColor; wbCtx.lineTo(e.clientX-r.left,e.clientY-r.top); wbCtx.stroke(); }
+function wbEnd() { wbDrawing=false; }
+function setWbTool(t,btn) { wbTool=t; document.querySelectorAll('.wb-tool-btn[data-tool]').forEach(b=>b.classList.remove('active')); btn.classList.add('active'); }
+function setWbColor(c,dot) { wbColor=c; document.querySelectorAll('.color-dot').forEach(d=>d.classList.remove('active')); dot.classList.add('active'); }
+function clearWhiteboard() { if(wbCtx) wbCtx.clearRect(0,0,wbCanvas.width,wbCanvas.height); }
+initWhiteboard();
+
+// TIMER
+let timerSeconds=25*60, timerTotal=25*60, timerRunning=false, timerInterval=null;
+function updateTimerDisplay() { const m=Math.floor(timerSeconds/60).toString().padStart(2,'0'); const s=(timerSeconds%60).toString().padStart(2,'0'); document.getElementById('timer-value').textContent=`${m}:${s}`; }
+function toggleTimer() { const btn=document.getElementById('timer-start'); if(timerRunning){clearInterval(timerInterval);timerRunning=false;btn.textContent='Resume';}else{timerRunning=true;btn.textContent='Pause';timerInterval=setInterval(()=>{if(timerSeconds>0){timerSeconds--;updateTimerDisplay();}else{clearInterval(timerInterval);timerRunning=false;btn.textContent='Start';document.getElementById('timer-value').style.color='var(--accent)';setTimeout(()=>document.getElementById('timer-value').style.color='',3000);}},1000);} }
+function resetTimer() { clearInterval(timerInterval);timerRunning=false;timerSeconds=timerTotal;updateTimerDisplay();document.getElementById('timer-start').textContent='Start';document.getElementById('timer-value').style.color=''; }
+function setTimerPreset(min,label) { clearInterval(timerInterval);timerRunning=false;timerSeconds=min*60;timerTotal=min*60;updateTimerDisplay();document.getElementById('timer-start').textContent='Start';document.getElementById('timer-label').textContent=label; }
+updateTimerDisplay();
+
+// NOTES
+let notes = JSON.parse(localStorage.getItem('dashboard-notes') || '[]');
+function renderNotes() {
+  const grid = document.getElementById('notes-grid'); grid.innerHTML = '';
+  const colors = [{bg:'var(--yellow-bg)',border:'rgba(240,199,94,0.2)'},{bg:'var(--blue-bg)',border:'rgba(91,156,246,0.2)'},{bg:'var(--green-bg)',border:'rgba(92,201,167,0.2)'},{bg:'var(--purple-bg)',border:'rgba(167,139,250,0.2)'}];
+  notes.forEach((note, i) => {
+    const div = document.createElement('div'); div.className = 'sticky-note fade-in';
+    const c = colors[i % colors.length];
+    div.style.cssText = `background:${c.bg};border:1px solid ${c.border}`;
+    div.innerHTML = `<button class="delete-note" onclick="deleteNote(${i})">✕</button><textarea oninput="updateNote(${i},this.value)">${note}</textarea>`;
+    grid.appendChild(div);
+  });
+  const btn = document.createElement('button'); btn.className='add-note-btn'; btn.textContent='+'; btn.onclick=addNote; grid.appendChild(btn);
+}
+function addNote(){notes.push('');saveNotes();renderNotes();}
+function deleteNote(i){notes.splice(i,1);saveNotes();renderNotes();}
+function updateNote(i,v){notes[i]=v;saveNotes();}
+function saveNotes(){localStorage.setItem('dashboard-notes',JSON.stringify(notes));}
+renderNotes();
+</script>
+</body>
+</html>
